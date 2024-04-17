@@ -24,85 +24,90 @@
 #include "Opcodes.h"
 #include "WorldPacket.h"
 #include "Log.h"
-//#include "Policies/SingletonImp.h"
 #include "zlib.h"
-
-//INSTANTIATE_SINGLETON_1(AddonHandler);
 
 namespace
 {
-	bool FingerprintValid(uint32 fingerprint)
-	{
-		// no bytes can equal 0x00, 0x01, or 0x02
-		const uint8 *b = reinterpret_cast<uint8 *>(&fingerprint);
-		for (auto i = 0u; i < sizeof(fingerprint); ++i)
-			if (b[i] <= 0x02)
-				return false;
-			
-		return true;
-		
-	}
-	bool FingerprintExists(uint32 fingerprint)
-	{
-		// if it is not valid, it can't exist!
-		if (!FingerprintValid(fingerprint))
-			return false;
-		std:unique_ptr<QueryResult> result(LogsDatabase.PQuery("SELECT COUNT(*) FROM system_fingerprint_usage WHERE fingerprint = %u", fingerprint));
-			return !!result->Fetch()[0].GetUInt32();
-	}
+bool FingerprintValid(uint32 fingerprint)
+{
+    // no bytes can equal 0x00, 0x01, or 0x02
+    const uint8 *b = reinterpret_cast<uint8 *>(&fingerprint);
+    for (auto i = 0u; i < sizeof(fingerprint); ++i)
+        if (b[i] <= 0x02)
+            return false;
 
-	uint32 GenerateFingerprint()
-	{
-		do 
-		{
-				uint32 fingerprint = 0;
-				// generate the four random bytes between 0x03 and 0xFF
-				for (auto i = 0u; i < sizeof(uint32); ++i)
-					fingerprint |= static_cast<uint8>(urand(0x03, 0xFF)) << 8 * i;
-				// if the fingerprint already exists, repeat
-				if (FingerprintExists(fingerprint))
-					continue;
-				
-				//if we reach here we are done! :)
-				return fingerprint;
-		}
-		while (true);
-	}
+    return true;
+}
 
-	struct AddonInfo
-	{
+bool FingerprintExists(uint32 fingerprint)
+{
+    // if it is not valid, it can't exist!
+    if (!FingerprintValid(fingerprint))
+        return false;
+
+    std::unique_ptr<QueryResult> result(LogsDatabase.PQuery("SELECT COUNT(*) FROM system_fingerprint_usage WHERE fingerprint = %u", fingerprint));
+
+    return !!result->Fetch()[0].GetUInt32();
+}
+
+uint32 GenerateFingerprint()
+{
+    do
+    {
+        uint32 fingerprint = 0;
+
+        // generate four random bytes between 0x03 and 0xFF
+        for (auto i = 0u; i < sizeof(uint32); ++i)
+            fingerprint |= static_cast<uint8>(urand(0x03, 0xFF)) << 8 * i;
+
+        // if the fingerprint already exists, repeat
+        if (FingerprintExists(fingerprint))
+            continue;
+
+        // if we reach here, we are done
+
+        return fingerprint;
+    } while (true);
+}
+
+struct AddonInfo
+{
     std::string name;
     uint8 flags;
     uint32 moduluscrc;
     uint32 urlcrc;
-	};
-	
-	// each addon will give us one byte of the fingerprint.  this byte can not be 0x00, 0x01, or 0x02, as
-	// the client considers these as valid flags with behaviors we want to avoid (i.e. 0x02 = banned)
-	static constexpr char *sFingerprintAddons[] =
-	{
-	"Blizzard_BindingUI",
+};
+
+// each addon will give us one byte of the fingerprint.  this byte can not be 0x00, 0x01, or 0x02, as
+// the client considers these as valid flags with behaviors we want to avoid (i.e. 0x02 = banned)
+static constexpr char *sFingerprintAddons[] =
+{
+    "Blizzard_BindingUI",
     "Blizzard_InspectUI",
     "Blizzard_MacroUI",
     "Blizzard_RaidUI",
-	};	
-	
+};
+}
 
-    // broken addon packet, can't be received from real client
+namespace NamreebAnticheat
+{
+bool ReadAddonInfo(WorldSession* session, WorldPacket &authPacket, WorldPacket &out)
+{
+// broken addon packet, can't be received from real client
     if (authPacket.rpos() + 4 > authPacket.size())
         return false;
 
-        // have we already received this information?  if so, it must be some kind of hacker
-        if (!!session->GetFingerprint())
-        {
-            sLog.Player(session, LOG_ANTICHEAT, LOG_LVL_BASIC,
-                "ADDON: Received addon information when fingerprint is already known (0x%lx).  This may be an attempt to crash the server",
-                session->GetFingerprint());
-            authPacket.rpos(authPacket.wpos());
-            return false;
-        }
+    // have we already received this information?  if so, it must be some kind of hacker
+    if (!!session->GetFingerprint())
+    {
+        sLog.Player(session, LOG_ANTICHEAT, LOG_LVL_BASIC,
+            "ADDON: Received addon information when fingerprint is already known (0x%lx).  This may be an attempt to crash the server",
+            session->GetFingerprint());
+        authPacket.rpos(authPacket.wpos());
+        return false;
+    }
 
-        uLong addonSize = authPacket.read<uint32>();
+    uLong addonSize = authPacket.read<uint32>();
 
     // empty addon packet, nothing process, can't be received from real client
     if (!addonSize)
@@ -123,13 +128,12 @@ namespace
     {
         sLog.Player(session, LOG_ANTICHEAT, LOG_LVL_BASIC, "ADDON: Addon information failed to compress");
         return false;
-	}
-	
+    }
 
     static constexpr uint32 correctModulusCRC = 0x4C1C776D;
 
     static constexpr uint8 modulus[] =
-		{
+    {
             0xC3, 0x5B, 0x50, 0x84, 0xB9, 0x3E, 0x32, 0x42, 0x8C, 0xD0, 0xC7, 0x48, 0xFA, 0x0E, 0x5D, 0x54,
             0x5A, 0xA3, 0x0E, 0x14, 0xBA, 0x9E, 0x0D, 0xB9, 0x5D, 0x8B, 0xEE, 0xB6, 0x84, 0x93, 0x45, 0x75,
             0xFF, 0x31, 0xFE, 0x2F, 0x64, 0x3F, 0x3D, 0x6D, 0x07, 0xD9, 0x44, 0x9B, 0x40, 0x85, 0x59, 0x34,
@@ -147,15 +151,16 @@ namespace
             0xC3, 0xFB, 0x1B, 0x8C, 0x29, 0xEF, 0x8E, 0xE5, 0x34, 0xCB, 0xD1, 0x2A, 0xCE, 0x79, 0xC3, 0x9A,
             0x0D, 0x36, 0xEA, 0x01, 0xE0, 0xAA, 0x91, 0x20, 0x54, 0xF0, 0x72, 0xD8, 0x1E, 0xC7, 0x89, 0xD2
         };
-		static constexpr size_t fingerprintAddonCount = sizeof(sFingerprintAddons) / sizeof(sFingerprintAddons[0]);
-		static_assert(fingerprintAddonCount == sizeof(uint32), "Bad size for fingerprint calculations");
 
-        // flag bytes for each addon which contributes to the fingerprint
-		uint8 fingerprintBytes[fingerprintAddonCount];
+    static constexpr size_t fingerprintAddonCount = sizeof(sFingerprintAddons) / sizeof(sFingerprintAddons[0]);
+    static_assert(fingerprintAddonCount == sizeof(uint32), "Bad size for fingerprint calculations");
 
-            memset(fingerprintBytes, 0, sizeof(fingerprintBytes));
+    // flag bytes for each addon which contributes to the fingerprint
+    uint8 fingerprintBytes[fingerprintAddonCount];
 
-            std::vector<AddonInfo> addonInfo;
+    memset(fingerprintBytes, 0, sizeof(fingerprintBytes));
+
+    std::vector<AddonInfo> addonInfo;
 
     // first, read client addon info, determining if the packet is valid, and if so, whether a fingerprint is already present
     while (clientAddonData.rpos() < clientAddonData.size())
@@ -163,9 +168,10 @@ namespace
         AddonInfo info;
  
         clientAddonData >> info.name >> info.flags >> info.moduluscrc >> info.urlcrc;
+
         sLog.Player(session, LOG_ANTICHEAT, LOG_LVL_DEBUG,
-        "ADDON: %s flags 0x%02x modulus crc 0x%08x url crc 0x%08x",
-        info.name.c_str(), info.flags, info.moduluscrc, info.urlcrc);
+            "ADDON: %s flags 0x%02x modulus crc 0x%08x url crc 0x%08x",
+            info.name.c_str(), info.flags, info.moduluscrc, info.urlcrc);
 
         for (auto i = 0u; i < fingerprintAddonCount; ++i)
         {
@@ -174,7 +180,6 @@ namespace
 
             fingerprintBytes[i] = info.flags;
         }
-
 
         addonInfo.push_back(info);
     }
@@ -194,7 +199,7 @@ namespace
             fingerprintFound = true;
     }
 
-		auto fingerprint = *reinterpret_cast<uint32 *>(&fingerprintBytes[0]);
+    auto fingerprint = *reinterpret_cast<uint32 *>(&fingerprintBytes[0]);
 
     // if a fingerprint was found and is valid, use it
     if (fingerprintFound && FingerprintValid(fingerprint))
@@ -261,10 +266,13 @@ namespace
 
                 if (!!addon.flags)
                     out << static_cast<uint32>(0);
-			}
-		}
+            }
+        }
+
         // never update the url
         out << static_cast<uint8>(0);
     }
+
     return true;
+}
 }
