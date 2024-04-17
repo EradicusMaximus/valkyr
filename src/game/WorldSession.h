@@ -366,8 +366,9 @@ class WorldSession
         void InitCheatData(Player* pPlayer);
         MovementAnticheat* GetCheatData();
         void ProcessAnticheatAction(char const* detector, char const* reason, uint32 cheatAction, uint32 banSeconds = 0 /* Perm ban */);
-        uint32 GetFingerprint() const { return 0; } // TODO
-        void CleanupFingerprintHistory() {} // TODO
+        uint32 GetFingerprint() const { return m_fingerprint; }
+        void SetFingerprint(uint32 fingerprint) { m_fingerprint = fingerprint; }
+        void CleanupFingerprintHistory() const;
         bool HasUsedClickToMove() const;
 
         // Movement
@@ -884,6 +885,7 @@ class WorldSession
         ClientOSType    m_clientOS;
         ClientPlatformType m_clientPlatform;
         uint32          m_gameBuild;
+		uint32 m_fingerprint;
         std::shared_ptr<PlayerBotEntry> m_bot;
         std::unique_ptr<SniffFile> m_sniffFile;
 

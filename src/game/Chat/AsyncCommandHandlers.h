@@ -73,6 +73,7 @@ struct PInfoData
     std::string m_wardenEndscene;
     std::string m_wardenProxifier;
     bool m_hasUsedClickToMove = false;
+	uint32 fingerprint = 0;
 };
 
 class WorldSession;

@@ -53,6 +53,7 @@ void PInfoHandler::HandlePInfoCommand(WorldSession* session, Player* target, Obj
         data->m_latency = target->GetSession()->GetLatency();
         data->m_locale = target->GetSession()->GetSessionDbcLocale();
         data->m_online = true;
+		data->fingerprint = target->GetSession()->GetFingerprint();
 
         if (auto const warden = target->GetSession()->GetWarden())
         {
@@ -236,7 +237,8 @@ void PInfoHandler::HandleResponse(WorldSession* session, PInfoData *data)
         cHandler.SendSysMessage(data->m_wardenProxifier.c_str());
     if (data->m_hasUsedClickToMove)
         cHandler.SendSysMessage("Using Click to Move!");
-
+    if (session->GetSecurity() >= SEC_DEVELOPER && data->fingerprint > 0)
+        cHandler.PSendSysMessage("Fingerprint: 0x%lx", data->fingerprint);
     delete data;
 }
 

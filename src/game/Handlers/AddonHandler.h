@@ -22,19 +22,14 @@
 #ifndef __ADDONHANDLER_H
 #define __ADDONHANDLER_H
 
-#include "Common.h"
-#include "Policies/Singleton.h"
+/*#include "Common.h"
+#include "Policies/Singleton.h"*/
 
 class WorldPacket;
+class WorldSession;
 
-class AddonHandler
+namespace NamreebAnticheat
 {
-    public:
-        /* Construction */
-        AddonHandler();
-        ~AddonHandler();
-                                                            //built addon packet
-        bool BuildAddonPacket(WorldPacket* Source, WorldPacket* Target);
-};
-#define sAddOnHandler MaNGOS::Singleton<AddonHandler>::Instance()
+    bool ReadAddonInfo(WorldSession* session, WorldPacket& authPacket, WorldPacket& out);
+}
 #endif
