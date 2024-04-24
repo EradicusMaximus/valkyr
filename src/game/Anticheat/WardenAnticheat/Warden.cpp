@@ -107,7 +107,7 @@ Warden::Warden(WorldSession* session, WardenModule const* module, BigNumber cons
     m_accountId(session->GetAccountId()), m_sessionGuid(session->GetGUID()), m_clientBuild(session->GetGameBuild()), m_accountName(session->GetUsername()),
     m_sessionIP(session->GetRemoteAddress()), m_clientOS(session->GetOS()), m_clientPlatform(session->GetPlatform()),
     m_inputCrypto(KeyLength), m_outputCrypto(KeyLength), m_initialized(false), m_module(module), m_crk(nullptr),
-    m_timeoutClock(0), m_scanClock(0), m_moduleSendPending(false), m_maiev(true)
+    m_timeoutClock(0), m_scanClock(0), m_moduleSendPending(false), m_maiev(true), _session(session)
 {
     auto const kBytes = K.AsByteArray();
 

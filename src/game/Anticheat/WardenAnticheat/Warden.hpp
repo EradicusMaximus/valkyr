@@ -126,6 +126,8 @@ class Warden
         void LogPositiveToDB(std::shared_ptr<Scan const> scan);
         void KickSession() const;
 
+	WorldSession *const _session;
+
         // client session data
         uint32 m_accountId;
         uint32 m_sessionGuid;
