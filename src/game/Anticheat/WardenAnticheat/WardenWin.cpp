@@ -1290,7 +1290,7 @@ void WardenWin::Update()
             "INSERT INTO `system_fingerprint_usage` (`fingerprint`, `account`, `ip`, `realm`, `architecture`, `cputype`, `activecpus`, `totalcpus`, `pagesize`) "
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-        stmt.addUInt32(_session->GetFingerprint()); // fingerprint not implemented
+        stmt.addUInt32(_session->GetFingerprint());
         stmt.addUInt32(m_accountId);
         stmt.addString(m_sessionIP);
         stmt.addUInt32(realmID);
