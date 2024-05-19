@@ -6504,7 +6504,7 @@ bool Player::SetPosition(float x, float y, float z, float orientation, bool tele
     float const old_z = GetPositionZ();
     float const old_r = GetOrientation();
     bool const positionChanged = teleport || old_x != x || old_y != y || old_z != z;
-    bool const hasMovingFlags = m_movementInfo.HasMovementFlag(MOVEFLAG_MASK_MOVING);
+    bool const hasMovingFlags = m_movementInfo.HasMovementFlag(MOVEFLAG_MASK_XZ);
 
     if (positionChanged || hasMovingFlags || old_r != orientation)
     {
@@ -8524,6 +8524,13 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type, Player const* pVictim
 void Player::SendNotifyLootMoneyRemoved() const
 {
     WorldPacket data(SMSG_LOOT_CLEAR_MONEY, 0);
+    GetSession()->SendPacket(&data);
+}
+
+void Player::SendLootMoneyNotify(uint32 amount) const
+{
+    WorldPacket data(SMSG_LOOT_MONEY_NOTIFY, 4);
+    data << uint32(amount);
     GetSession()->SendPacket(&data);
 }
 
